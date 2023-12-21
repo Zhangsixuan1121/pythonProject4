@@ -262,7 +262,7 @@ def get_knn_words():
     return jsonify(response)
 
 
-@app.route("/", methods=['GET'])
+@app.route("/index", methods=['GET'])
 def index():
     message = "Congratulations, it's a web app!"
     return render_template(
@@ -273,4 +273,4 @@ def index():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8080, debug=True)
+    app.run()
