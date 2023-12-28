@@ -1,0 +1,494 @@
+<html>
+<head>
+    <title>Liushuaitong</title>
+    <script src="https://cdn.staticfile.org/Chart.js/3.9.1/chart.js"></script>
+</head>
+<body>
+<div style="display: flex;">
+    <div style="flex: 1;min-width: 300px;">
+        <div className="Liu">
+            <h2>Liu shuaitong 76015</h2>
+        </div>
+        <div className="picture1">
+            <img src="static/liushuaitong.jpg" width="200" height="200"/>
+        </div>
+        <div className="Liu">
+            <h2>Zhang sixuan 76019</h2>
+        </div>
+        <div className="picture1">
+            <img src="static/zhangsixuan.jpg" width="200" height="200"/>
+        </div>
+    </div>
+    <div style="flex: 4;">
+        <div style="display: flex; margin-top: 20px;">
+            <span style="margin-right: 10px; margin-top: 7px;">Please add data:</span>
+            <input id="city-name-input" placeholder="city-name" class="addInput"/>
+            <input id="city-state-input" placeholder="city-state" class="addInput" style="margin-left: 5px"/>
+            <button id="btn-page" class="button2" onclick="updateChart()">Search</button>
+            <button id="previousButton" class="button2">上一页</button>
+            <button id="nextButton" class="button2">下一页</button>
+        </div>
+
+        <div style="display: flex; margin-top: 20px;">
+            <span style="margin-right: 10px; margin-top: 7px;">Please add data:</span>
+            <input id="city-name-input2" placeholder="city-name" class="addInput"/>
+            <input id="city-state-input2" placeholder="city-state" class="addInput" style="margin-left: 5px"/>
+            <button id="btn-score" class="button2" onclick="updateScore()">Search</button>
+            <button id="previousButton2" class="button2">上一页</button>
+            <button id="nextButton2" class="button2">下一页</button>
+        </div>
+
+        <div style="display: flex; margin-top: 20px;">
+            <span style="margin-right: 10px; margin-top: 7px;">Please enter data:</span>
+            <input id="class" placeholder="class" class="addInput"/>
+            <input id="knn" placeholder="knn" class="addInput" style="margin-left: 5px"/>
+            <input id="word" placeholder="word" class="addInput" style="margin-left: 5px"/>
+            <button id="btn-knn" class="button2" onclick="knnworkBar()">Search</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <h3>Data Display:Each search takes about four or five minutes to display results.Please wait patiently.</h3>
+            <hr>
+        </div>
+        <div class="centered">
+            <div class="bar">
+                <canvas id="bar"></canvas>
+            </div>
+        </div>
+        <div class="centered" style="margin-top: 60px">
+        <div style="width: 400px" height="300px">
+            <canvas id="radar" width="300" height="300"></canvas>
+        </div>
+            </div>
+        <div id="result-container">
+        </div>
+        <div style="margin-top: 80px;">
+            <hr>
+            <div id="city-num"></div>
+            <div id="center-city"></div>
+            <div id="city-score"></div>
+            <div id="city-state"></div>
+        </div>
+    </div>
+</div>
+</body>
+<script>
+    Chart.register({
+        id: 'customPlugin',
+        beforeDestroy: function (chart) {
+            const canvas = chart.ctx.canvas;
+            canvas.chart = null;
+            canvas.config = null;
+            canvas.style = null;
+        }
+    });
+    const canvas = document.getElementById('bar');
+    const ctx = canvas.getContext('2d');
+    const previousButton = document.getElementById('previousButton');
+    const nextButton = document.getElementById('nextButton');
+    const previousButton2 = document.getElementById('previousButton2');
+    const nextButton2 = document.getElementById('nextButton2');
+
+    let myChart;
+    let myChart2;
+
+    function updateChart() {
+
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const cityNameInput = document.getElementById('city-name-input');
+        const cityStateInput = document.getElementById('city-state-input');
+        var resultContainer = document.getElementById("result-container");
+        resultContainer.innerHTML = "";
+
+        // 记录开始时间
+        var startTime = performance.now();
+
+        const cityName = cityNameInput.value;
+        const cityState = cityStateInput.value;
+
+        const url = `/bar?cityName=${cityName}&cityState=${cityState}`;
+
+        fetch(url, {
+            method: 'GET'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Error: ' + response.status);
+                }
+            })
+            .then(function (data) {
+                if (data.error) {
+                    // 如果后端返回错误信息，则不显示柱状图
+                    console.error(data.error);
+                } else {
+                    const labels = data.cities; // 从后端获取城市名
+                    const distances = data.distances; // 从后端获取距离数据
+
+                    // 计算响应时间
+                    var responseTime = performance.now() - startTime;
+
+                    // 清空结果容器
+                    resultContainer.innerHTML = "";
+
+                    // 创建响应时间元素
+                    var timeElement = document.createElement("p");
+                    timeElement.textContent = "Response Time: " + responseTime + "ms";
+
+                    // 将响应时间元素添加到结果容器中
+                    resultContainer.appendChild(timeElement);
+
+                    const chartData = {
+                        labels: labels,
+                        datasets: [{
+                            label: '柱形图',
+                            data: distances,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.2)',
+                                'rgba(255, 159, 64, 0.2)',
+                                'rgba(255, 205, 86, 0.2)',
+                                'rgba(75, 192, 192, 0.2)',
+                                'rgba(54, 162, 235, 0.2)',
+                                'rgba(153, 102, 255, 0.2)',
+                                'rgba(201, 203, 207, 0.2)'
+                            ],
+                            borderColor: [
+                                'rgb(255, 99, 132)',
+                                'rgb(255, 159, 64)',
+                                'rgb(255, 205, 86)',
+                                'rgb(75, 192, 192)',
+                                'rgb(54, 162, 235)',
+                                'rgb(153, 102, 255)',
+                                'rgb(201, 203, 207)'
+                            ],
+                            borderWidth: 1
+                        }]
+                    };
+
+                    const config = {
+                        type: 'bar',
+                        data: chartData,
+                        options: {
+                            legend: {
+                                display: false
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    };
+                    if (myChart) {
+                        myChart.destroy();
+                        myChart = null;
+                    }
+
+                    myChart = new Chart(ctx, config);
+                    canvas.chart = myChart;
+                }
+            })
+            .catch(error => {
+                console.error(error);
+            });
+    }
+
+
+    function updateScore() {
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const cityNameInput = document.getElementById('city-name-input2');
+        const cityStateInput = document.getElementById('city-state-input2');
+
+        const cityName = cityNameInput.value;
+        const cityState = cityStateInput.value;
+
+        const url = `/line?cityName=${cityName}&cityState=${cityState}`;
+        var resultContainer = document.getElementById("result-container");
+        resultContainer.innerHTML = "";
+
+        // 记录开始时间
+        var startTime = performance.now();
+
+        fetch(url, {
+            method: 'GET'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Error: ' + response.status);
+                }
+            })
+            .then(function (data) {
+                if (data.error) {
+                    // 如果后端返回错误信息，则不显示柱状图
+                    console.error(data.error);
+                } else {
+
+                    // 计算响应时间
+                    var responseTime = performance.now() - startTime;
+
+                    // 清空结果容器
+                    resultContainer.innerHTML = "";
+
+                    // 创建响应时间元素
+                    var timeElement = document.createElement("p");
+                    timeElement.textContent = "Response Time: " + responseTime + "ms";
+
+                    // 将响应时间元素添加到结果容器中
+                    resultContainer.appendChild(timeElement);
+
+                    const cities = data.cities;
+                    const avgScores = data.avg_scores;
+
+                    // 创建折线图的数据
+                    const chartData = {
+                        labels: cities,
+                        datasets: [{
+                            label: '平均评价得分',
+                            data: avgScores,
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.4
+                        }]
+                    };
+
+                    // 配置折线图的选项
+                    const chartOptions = {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                max: 10
+                            }
+                        }
+                    };
+
+                    // 创建或更新折线图
+                    if (myChart) {
+                        myChart.destroy();
+                    }
+                    myChart = new Chart(ctx, {
+                        type: 'line',
+                        data: chartData,
+                        options: chartOptions
+                    });
+                }
+            })
+            .catch(function (error) {
+                console.error('Error:', error);
+            });
+    }
+
+    function generateRandomColor() {
+        // 生成随机RGB颜色
+        var r = Math.floor(Math.random() * 256);
+        var g = Math.floor(Math.random() * 256);
+        var b = Math.floor(Math.random() * 256);
+
+        // 将RGB颜色转换为十六进制表示
+        var hexColor = "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+        return hexColor;
+    }
+
+    function knnworkBar() {
+        // 获取输入框的值
+        var classes = document.getElementById("class").value;
+        var k = document.getElementById("knn").value;
+        var words = document.getElementById("word").value;
+
+        // 构建请求 URL
+        var url = `/stat/knn_reviews?classes=${encodeURIComponent(classes)}&k=${encodeURIComponent(k)}&words=${encodeURIComponent(words)}`;
+        // 发送 GET 请求
+        fetch(url, {
+            method: 'GET'
+        })
+            .then(function (response) {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    throw new Error('Error: ' + response.status);
+                }
+            })
+            .then(function (data) {
+                // 展示结果数据
+                if (data) {
+                    console.log("getget");
+                    // 处理响应数据
+                    let labelsList = [];
+                    let dataList = [];
+                    let backgroundColorList = [];
+                    for (var i = 0; i < data.length; i++) {
+                        var data_work = data[i];
+                        console.log(data_work);
+                        labelsList.push(data_work.class);
+                        dataList.push(data_work.population);
+                        backgroundColorList.push(generateRandomColor());
+                        console.log(dataList);
+                    }
+                    let ctx = document.getElementById('bar');
+                    let data3 = {
+                        labels: labelsList,
+                        datasets: [{
+                            label: 'clustering result',
+                            data: dataList,
+                            backgroundColor: backgroundColorList,
+                        }]
+                    };
+                    let config = {
+                        type: 'pie',
+                        data: data3,
+                        options: {
+                            onClick: skipRadar
+                        }
+                    };
+                    console.log(config);
+                    if (myChart) {
+                        myChart.destroy();
+                    }
+                    myChart = new Chart(ctx, config);
+                    console.log("chart");
+                }
+            })
+            .catch(function (error) {
+                console.log('Error:', error);
+            });
+    }
+
+    function skipRadar(event, elements) {
+        if (elements.length > 0) {
+            // 获取点击的部分索引
+            var clickedIndex = elements[0].index;
+            console.log(clickedIndex);
+            var url = `/getRadar?index=${clickedIndex}`;
+
+            fetch(url, {
+                method: 'GET'
+            })
+                .then(function (response) {
+                    if (response.ok) {
+                        return response.json();
+                    } else {
+                        throw new Error('Error: ' + response.status);
+                    }
+                })
+                .then(function (data) {
+                    // 展示结果数据
+                    if (data) {
+                        console.log("getget");
+                        let labelstable = data.labels;
+                        var labelone = 'class';
+                        var labeltwo = 'average';
+                        var dataClass = data.dataClass;
+                        var dataAverage = data.dataAverage;
+                        console.log('1:', data.center_city)
+                        // 展示中心城市
+                        document.getElementById('center-city').innerHTML = "Center City: " + data.center_city;
+                        // 展示城市数量
+                        document.getElementById('city-num').innerHTML = "Class Number: " + data.cityNum;
+
+                        document.getElementById('city-score').innerHTML = "weighted average review score:  " + data.weighted_average_score;
+
+                        document.getElementById('city-state').innerHTML = "City State: " + data.state;
+
+
+                        let ctx = document.getElementById('radar');
+                        let Radata = {
+                            labels: labelstable,
+                            datasets: [{
+                                label: labelone,
+                                data: dataClass,
+                                fill: true,
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderColor: 'rgb(255, 99, 132)',
+                                pointBackgroundColor: 'rgb(255, 99, 132)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgb(255, 99, 132)'
+                            }, {
+                                label: 'average',
+                                data: dataAverage,
+                                fill: true,
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgb(54, 162, 235)',
+                                pointBackgroundColor: 'rgb(54, 162, 235)',
+                                pointBorderColor: '#fff',
+                                pointHoverBackgroundColor: '#fff',
+                                pointHoverBorderColor: 'rgb(54, 162, 235)'
+                            }]
+                        };
+                        const config = {
+                            type: 'radar',
+                            data: Radata,
+                            options: {
+                                elements: {
+                                    line: {
+                                        borderWidth: 3
+                                    }
+                                }
+                            },
+                        };
+                        console.log(config);
+                        if (myChart2) {
+                            myChart2.destroy();
+                        }
+                        myChart2 = new Chart(ctx, config);
+                        console.log("chart");
+                    }
+                })
+                .catch(function (error) {
+                    console.log('Error:', error);
+                });
+
+        }
+
+    }
+
+    previousButton.addEventListener('click', () => {
+        updateChart();
+    });
+
+    nextButton.addEventListener('click', () => {
+        updateChart();
+    });
+    previousButton2.addEventListener('click', () => {
+        updateScore();
+    });
+
+    nextButton2.addEventListener('click', () => {
+        updateScore();
+    });
+
+    updateChart();
+    updateScore();
+
+</script>
+<style>
+    .bar {
+        display: flex;
+        justify-self: center;
+        width: 600px;
+        height: 400px;
+        align-items: center;
+        margin-top: 100px;
+    }
+
+    .button2 {
+        background-color: dodgerblue;
+        color: white;
+        width: 90px;
+        height: 27px;
+        border: 0;
+        font-size: 16px;
+        border-radius: 30px;
+        margin-left: 15px;
+        margin-top: 5px;
+    }
+</style>
+</html>
